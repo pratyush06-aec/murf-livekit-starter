@@ -25,7 +25,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("agent")
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 # ── DEBUG: Env file loading ─────────────────────────────────────────────────
 env_path = Path(__file__).resolve().parent.parent / ".env.local"
@@ -124,9 +124,12 @@ async def my_agent(ctx: JobContext):
         raise
 
     # ── DEBUG: LLM init ─────────────────────────────────────────────────
-    # logger.debug("[LLM] Initializing Google LLM (model=gemini-2.5-flash)...")
+    # logger.debug("[LLM] Initializing Google LLM (model=gemini-3.5-flash)...")
     try:
-        llm = google.LLM(model="gemini-2.5-flash")
+        llm = google.LLM(
+            model="gemini-3.5-flash",
+            temperature=0.7,
+        )
         # logger.debug("[LLM] Google LLM created successfully")
     except Exception as e:
         # logger.error("[LLM] Failed to create Google LLM: %s", e)
@@ -137,7 +140,7 @@ async def my_agent(ctx: JobContext):
     # logger.debug("[TTS] Initializing Murf TTS (voice=en-US-matthew, style=Conversation)...")
     try:
         tts = murf.TTS(
-            voice="en-IN-priya",
+            voice="en-IN-pooja",
             style="Conversational",
             tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
             text_pacing=True,
