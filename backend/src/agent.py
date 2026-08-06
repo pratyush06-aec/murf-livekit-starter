@@ -137,7 +137,7 @@ async def my_agent(ctx: JobContext):
     # logger.debug("[TTS] Initializing Murf TTS (voice=en-US-matthew, style=Conversation)...")
     try:
         tts = murf.TTS(
-            voice="en-IN-pooja",
+            voice="en-IN-priya",
             style="Conversational",
             tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
             text_pacing=True,
