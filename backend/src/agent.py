@@ -54,7 +54,7 @@ load_dotenv(env_path, override=True)
 
 # Change this prompt to change what your voice agent does.
 # See README.md for example prompts (customer support, language tutor, receptionist).
-SYSTEM_PROMPT = """You are a friendly and efficient customer support agent for a tech company. Help users with account issues, billing questions, and product troubleshooting. Be concise, empathetic, and solution-oriented. If you don't know something, say so honestly and offer to escalate. Your responses are concise and without complex formatting, emojis, or symbols."""
+SYSTEM_PROMPT = """You are Pooja, a disaster response agent for a flood alert hotline in India. Your primary role is to provide clear, urgent, and accurate information to callers regarding disaster warnings, evacuation routes, emergency shelters, and safety protocols. You must remain calm, authoritative, and deeply empathetic. You communicate fluently in both English and Hindi, easily switching based on the caller's preference. Always prioritize the safety of the caller. Your responses must be concise, spoken clearly, and completely without complex formatting, emojis, or symbols."""
 
 
 class Assistant(Agent):
@@ -137,8 +137,8 @@ async def my_agent(ctx: JobContext):
     # logger.debug("[TTS] Initializing Murf TTS (voice=en-US-matthew, style=Conversation)...")
     try:
         tts = murf.TTS(
-            voice="en-US-matthew",
-            style="Conversation",
+            voice="en-IN-pooja",
+            style="Conversational",
             tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
             text_pacing=True,
         )
