@@ -23,7 +23,7 @@ function dbg(tag: string, ...args: unknown[]) {
   // console.log(`[DEBUG][TOKEN-API][${tag}]`, ...args);
 }
 function dbgErr(tag: string, ...args: unknown[]) {
-  console.error(`[ERROR][TOKEN-API][${tag}]`, ...args);
+  // console.error(`[ERROR][TOKEN-API][${tag}]`, ...args);
 }
 
 export async function POST(req: Request) {
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     if (error instanceof Error) {
       dbgErr('HANDLER', `❌ Error in POST /api/token: ${error.message}`);
       dbgErr('HANDLER', `Stack trace:`, error.stack);
-      console.error(error);
+      // console.error(error);
       return new NextResponse(error.message, { status: 500 });
     }
   }
