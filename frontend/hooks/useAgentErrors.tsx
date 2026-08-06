@@ -4,6 +4,11 @@ import { useAgent, useSessionContext } from '@livekit/components-react';
 import { WarningIcon } from '@phosphor-icons/react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+// ── DEBUG helper ─────────────────────────────────────────────────────────────
+function dbg(tag: string, ...args: unknown[]) {
+  // console.log(`%c[DEBUG][AGENT-ERRORS][${tag}]`, 'color: #ef5350; font-weight: bold;', ...args);
+}
+
 interface ToastProps {
   title: ReactNode;
   description: ReactNode;
@@ -29,8 +34,18 @@ export function useAgentErrors() {
   const { isConnected, end } = useSessionContext();
 
   useEffect(() => {
+    dbg('STATE', `agent.state=${agent.state}, isConnected=${isConnected}`);
+
+    if (agent.state) {
+      dbg('AGENT-STATE', `Current agent state: "${agent.state}"`);
+    }
+
     if (isConnected && agent.state === 'failed') {
       const reasons = agent.failureReasons;
+      dbg('FAILURE', `❌ Agent FAILED with ${reasons.length} reason(s):`);
+      reasons.forEach((reason, i) => {
+        dbg('FAILURE', `  [${i}] ${reason}`);
+      });
 
       toastAlert({
         title: 'Session ended',
@@ -59,6 +74,7 @@ export function useAgentErrors() {
         ),
       });
 
+      dbg('FAILURE', 'Calling end() to disconnect session');
       end();
     }
   }, [agent, isConnected, end]);

@@ -12,6 +12,11 @@ import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/shadcn/utils';
 import { TileLayout } from './tile-view';
 
+// ── DEBUG helper ─────────────────────────────────────────────────────────────
+function dbg(tag: string, ...args: unknown[]) {
+  // console.log(`%c[DEBUG][SESSION-VIEW][${tag}]`, 'color: #ffb74d; font-weight: bold;', ...args);
+}
+
 const MotionMessage = motion.create(Shimmer);
 
 const BOTTOM_VIEW_MOTION_PROPS: MotionProps = {
@@ -181,6 +186,8 @@ export function AgentSessionView_01({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { state: agentState } = useAgent();
 
+  dbg('RENDER', `agentState="${agentState}", messages=${messages.length}, chatOpen=${chatOpen}, isConnected=${session.isConnected}`);
+
   const controls: AgentControlBarControls = {
     leave: true,
     microphone: true,
@@ -190,6 +197,16 @@ export function AgentSessionView_01({
   };
 
   useEffect(() => {
+    dbg('AGENT-STATE', `Agent state changed → "${agentState}"`);
+  }, [agentState]);
+
+  useEffect(() => {
+    dbg('MESSAGES', `Message count changed → ${messages.length}`);
+    if (messages.length > 0) {
+      const last = messages.at(-1);
+      dbg('MESSAGES', `Latest message: from=${last?.from?.identity ?? 'unknown'} isLocal=${last?.from?.isLocal}`);
+    }
+
     const lastMessage = messages.at(-1);
     const lastMessageIsLocal = lastMessage?.from?.isLocal === true;
 
@@ -197,6 +214,16 @@ export function AgentSessionView_01({
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleChatToggle = (open: boolean) => {
+    dbg('CHAT', `Chat toggled → ${open}`);
+    setChatOpen(open);
+  };
+
+  const handleDisconnect = () => {
+    dbg('DISCONNECT', '🔴 User disconnecting session...');
+    session.end();
+  };
 
   return (
     <section
@@ -264,8 +291,8 @@ export function AgentSessionView_01({
             controls={controls}
             isChatOpen={chatOpen}
             isConnected={session.isConnected}
-            onDisconnect={session.end}
-            onIsChatOpenChange={setChatOpen}
+            onDisconnect={handleDisconnect}
+            onIsChatOpenChange={handleChatToggle}
           />
         </div>
       </motion.div>

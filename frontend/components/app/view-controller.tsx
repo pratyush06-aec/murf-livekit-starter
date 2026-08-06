@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSessionContext } from '@livekit/components-react';
@@ -28,6 +29,11 @@ const VIEW_MOTION_PROPS = {
   },
 };
 
+// ── DEBUG helper ─────────────────────────────────────────────────────────────
+function dbg(tag: string, ...args: unknown[]) {
+  // console.log(`%c[DEBUG][VIEW-CTRL][${tag}]`, 'color: #81c784; font-weight: bold;', ...args);
+}
+
 interface ViewControllerProps {
   appConfig: AppConfig;
 }
@@ -35,6 +41,23 @@ interface ViewControllerProps {
 export function ViewController({ appConfig }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
   const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    dbg('STATE-CHANGE', `isConnected changed → ${isConnected}`);
+    if (isConnected) {
+      dbg('STATE-CHANGE', '🟢 Connected! Showing session view.');
+    } else {
+      dbg('STATE-CHANGE', '🔴 Disconnected. Showing welcome view.');
+    }
+  }, [isConnected]);
+
+  dbg('RENDER', `isConnected=${isConnected}, theme=${resolvedTheme}`);
+
+  const handleStartCall = () => {
+    dbg('START-CALL', '🔘 User clicked Start — calling session.start()...');
+    start();
+    dbg('START-CALL', 'session.start() called');
+  };
 
   return (
     <AnimatePresence mode="wait">
@@ -44,7 +67,7 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           key="welcome"
           {...VIEW_MOTION_PROPS}
           startButtonText={appConfig.startButtonText}
-          onStartCall={start}
+          onStartCall={handleStartCall}
         />
       )}
       {/* Session view */}
