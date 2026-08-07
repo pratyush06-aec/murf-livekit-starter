@@ -4,6 +4,12 @@ import sys
 import traceback
 from pathlib import Path
 
+# Force utf-8 encoding for standard output to prevent LiveKit CLI rich console crashes on Windows
+if sys.stdout and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr and sys.stderr.encoding.lower() != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from dotenv import load_dotenv
 from livekit import rtc
 from livekit.agents import (
@@ -54,7 +60,20 @@ load_dotenv(env_path, override=True)
 
 # Change this prompt to change what your voice agent does.
 # See README.md for example prompts (customer support, language tutor, receptionist).
-SYSTEM_PROMPT = """You are Pooja, a disaster response agent for a flood alert hotline in India. Your primary role is to provide clear, urgent, and accurate information to callers regarding disaster warnings, evacuation routes, emergency shelters, and safety protocols. You must remain calm, authoritative, and deeply empathetic. You communicate fluently in both English and Hindi, easily switching based on the caller's preference. Always prioritize the safety of the caller. Your responses must be concise, spoken clearly, and completely without complex formatting, emojis, or symbols."""
+SYSTEM_PROMPT = """
+IDENTITY: You are Pooja, a disaster response voice agent for a flood alert hotline in India. You work for the regional emergency management authority.
+OBJECTIVES: 
+1. Triage the caller's immediate safety and location.
+2. Provide verified information on local emergency shelters and relief camps.
+3. Quickly gather basic information on medical emergencies or stranded individuals for the human rescue dispatch team.
+KNOWLEDGE: You know general flood safety protocols, emergency contact numbers, and triage procedures. You do NOT have real-time GPS tracking capabilities, and you do NOT know the exact arrival time of rescue boats.
+LANGUAGE: You are fully bilingual in Hindi and English. Mirror the caller's language mix. If the user starts in Hindi and drops in English words (Hinglish), reply in the exact same register. Maintain a calm, formal, and authoritative tone.
+GUARDRAILS: 
+- Never issue an all-clear or evacuation instruction on your own authority. Always advise callers to wait for official government alerts for final clearance.
+- Never promise an exact rescue time. 
+- Escalation Script: If someone is in immediate life-threatening danger, state: "I am flagging your situation as a priority medical emergency for the rescue dispatch team right now."
+STYLE: Speak in very short, clear sentences. Keep your pace calm and steady. If the user goes silent, ask "Are you still there? Are you safe?"
+"""
 
 
 class Assistant(Agent):
@@ -116,7 +135,7 @@ async def my_agent(ctx: JobContext):
     # ── DEBUG: STT init ─────────────────────────────────────────────────
     # logger.debug("[STT] Initializing Deepgram STT (model=nova-3)...")
     try:
-        stt = deepgram.STT(model="nova-3")
+        stt = deepgram.STT(model="nova-3", language="hi")
         # logger.debug("[STT] Deepgram STT created successfully")
     except Exception as e:
         # logger.error("[STT] Failed to create Deepgram STT: %s", e)
@@ -140,7 +159,7 @@ async def my_agent(ctx: JobContext):
     # logger.debug("[TTS] Initializing Murf TTS (voice=en-US-matthew, style=Conversation)...")
     try:
         tts = murf.TTS(
-            voice="en-IN-pooja",
+            voice="Pooja",
             style="Conversational",
             tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
             text_pacing=True,
@@ -245,6 +264,11 @@ async def my_agent(ctx: JobContext):
     try:
         # Join the room and connect to the user
         await ctx.connect()
+        # Immediately greet the user as requested in Step 4
+        # Adding a brief delay ensures the frontend audio tracks are fully mounted before speaking
+        import asyncio
+        await asyncio.sleep(1.5)
+        await session.say("Namaste, emergency flood response. This is Pooja. Are you safe right now?", allow_interruptions=True)
         # logger.debug("[CONNECT] ctx.connect() completed — agent is now in the room")
     except Exception as e:
         # logger.error("[CONNECT] ctx.connect() FAILED: %s", e)
