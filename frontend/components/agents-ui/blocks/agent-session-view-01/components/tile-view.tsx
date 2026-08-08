@@ -132,31 +132,33 @@ export function TileLayout({
                   }}
                   className={cn('relative aspect-square h-[90px]')}
                 >
-                  <AudioVisualizer
-                    key="audio-visualizer"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: chatOpen ? 0.2 : 1 }}
-                    transition={{
-                      ...ANIMATION_TRANSITION,
-                      delay: animationDelay,
-                    }}
-                    audioVisualizerType={audioVisualizerType}
-                    audioVisualizerColor={audioVisualizerColor}
-                    audioVisualizerColorShift={audioVisualizerColorShift}
-                    audioVisualizerBarCount={audioVisualizerBarCount}
-                    audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
-                    audioVisualizerRadialRadius={audioVisualizerRadialRadius}
-                    audioVisualizerGridRowCount={audioVisualizerGridRowCount}
-                    audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
-                    audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
-                    isChatOpen={chatOpen}
-                    className={cn(
-                      'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
-                      'bg-background rounded-[50px] border border-transparent transition-[border,drop-shadow]',
-                      chatOpen && 'border-input shadow-2xl/10 delay-200'
-                    )}
-                    style={{ color: audioVisualizerColor }}
-                  />
+                  {audioVisualizerType !== 'sphere' && (
+                    <AudioVisualizer
+                      key="audio-visualizer"
+                      initial={{ scale: 1 }}
+                      animate={{ scale: chatOpen ? 0.2 : 1 }}
+                      transition={{
+                        ...ANIMATION_TRANSITION,
+                        delay: animationDelay,
+                      }}
+                      audioVisualizerType={audioVisualizerType}
+                      audioVisualizerColor={audioVisualizerColor}
+                      audioVisualizerColorShift={audioVisualizerColorShift}
+                      audioVisualizerBarCount={audioVisualizerBarCount}
+                      audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+                      audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+                      audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+                      audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+                      audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+                      isChatOpen={chatOpen}
+                      className={cn(
+                        'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+                        'rounded-[50px] border border-transparent transition-[border,drop-shadow]',
+                        chatOpen && 'border-input shadow-2xl/10 delay-200'
+                      )}
+                      style={{ color: audioVisualizerColor }}
+                    />
+                  )}
                 </motion.div>
               )}
 

@@ -7,6 +7,7 @@ import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-vis
 import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visualizer-bar';
 import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
 import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
+import { AgentAudioVisualizerSphere } from '@/components/agents-ui/agent-audio-visualizer-sphere';
 import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
 import { cn } from '@/lib/shadcn/utils';
 
@@ -15,10 +16,11 @@ const MotionAgentAudioVisualizerBar = motion.create(AgentAudioVisualizerBar);
 const MotionAgentAudioVisualizerGrid = motion.create(AgentAudioVisualizerGrid);
 const MotionAgentAudioVisualizerRadial = motion.create(AgentAudioVisualizerRadial);
 const MotionAgentAudioVisualizerWave = motion.create(AgentAudioVisualizerWave);
+const MotionAgentAudioVisualizerSphere = motion.create(AgentAudioVisualizerSphere);
 
 interface AudioVisualizerProps extends MotionProps {
   isChatOpen: boolean;
-  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
+  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura' | 'sphere';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorShift?: number;
   audioVisualizerWaveLineWidth?: number;
@@ -69,6 +71,18 @@ export function AudioVisualizer({
             colorShift={audioVisualizerColorShift}
             lineWidth={isChatOpen ? audioVisualizerWaveLineWidth * 2 : audioVisualizerWaveLineWidth}
             className="size-[300px] md:size-[450px]"
+          />
+        </motion.div>
+      );
+    }
+    case 'sphere': {
+      return (
+        <motion.div className={cn('h-full w-full', className)} {...props}>
+          <MotionAgentAudioVisualizerSphere
+            state={state}
+            audioTrack={audioTrack}
+            size="full"
+            className="h-full w-full"
           />
         </motion.div>
       );

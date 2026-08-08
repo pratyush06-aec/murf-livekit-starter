@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { ConnectionState } from 'livekit-client';
 import { AnimatePresence, motion } from 'motion/react';
-import { useSessionContext } from '@livekit/components-react';
+import { useConnectionState, useSessionContext } from '@livekit/components-react';
 import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
 import { WelcomeView } from '@/components/app/welcome-view';
@@ -40,7 +41,10 @@ interface ViewControllerProps {
 
 export function ViewController({ appConfig }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
+  const connectionState = useConnectionState();
   const { resolvedTheme } = useTheme();
+
+  const isConnecting = connectionState === ConnectionState.Connecting;
 
   useEffect(() => {
     dbg('STATE-CHANGE', `isConnected changed → ${isConnected}`);
@@ -67,7 +71,9 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           key="welcome"
           {...VIEW_MOTION_PROPS}
           startButtonText={appConfig.startButtonText}
+          isConnecting={isConnecting}
           onStartCall={handleStartCall}
+          className="fixed inset-0"
         />
       )}
       {/* Session view */}

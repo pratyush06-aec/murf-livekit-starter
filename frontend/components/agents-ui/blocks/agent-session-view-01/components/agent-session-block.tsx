@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Track } from 'livekit-client';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
+import { toast } from 'sonner';
 import { useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
@@ -10,6 +12,7 @@ import {
 } from '@/components/agents-ui/agent-control-bar';
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/shadcn/utils';
+import { AudioVisualizer } from './audio-visualizer';
 import { TileLayout } from './tile-view';
 
 // ── DEBUG helper ─────────────────────────────────────────────────────────────
@@ -186,7 +189,10 @@ export function AgentSessionView_01({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { state: agentState } = useAgent();
 
-  dbg('RENDER', `agentState="${agentState}", messages=${messages.length}, chatOpen=${chatOpen}, isConnected=${session.isConnected}`);
+  dbg(
+    'RENDER',
+    `agentState="${agentState}", messages=${messages.length}, chatOpen=${chatOpen}, isConnected=${session.isConnected}`
+  );
 
   const controls: AgentControlBarControls = {
     leave: true,
@@ -204,7 +210,10 @@ export function AgentSessionView_01({
     dbg('MESSAGES', `Message count changed → ${messages.length}`);
     if (messages.length > 0) {
       const last = messages.at(-1);
-      dbg('MESSAGES', `Latest message: from=${last?.from?.identity ?? 'unknown'} isLocal=${last?.from?.isLocal}`);
+      dbg(
+        'MESSAGES',
+        `Latest message: from=${last?.from?.identity ?? 'unknown'} isLocal=${last?.from?.isLocal}`
+      );
     }
 
     const lastMessage = messages.at(-1);
@@ -228,18 +237,31 @@ export function AgentSessionView_01({
   return (
     <section
       ref={ref}
-      className={cn('bg-background relative z-10 h-full w-full overflow-hidden', className)}
+      className={cn(
+        'pointer-events-none relative z-10 h-full w-full overflow-hidden bg-transparent',
+        className
+      )}
       {...props}
     >
-      <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
+      {audioVisualizerType === 'sphere' && (
+        <div className="pointer-events-auto absolute inset-0 z-0 h-full w-full">
+          <AudioVisualizer
+            audioVisualizerType="sphere"
+            isChatOpen={chatOpen}
+            className="h-full w-full"
+          />
+        </div>
+      )}
+
+      <Fade top className="pointer-events-none absolute inset-x-4 top-0 z-10 h-40" />
       {/* transcript */}
 
-      <div className="absolute top-0 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
+      <div className="pointer-events-none absolute top-0 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
         <AnimatePresence>
           {chatOpen && (
             <motion.div
               {...CHAT_MOTION_PROPS}
-              className="flex h-full w-full flex-col gap-4 space-y-3 transition-opacity duration-300 ease-out"
+              className="pointer-events-auto flex h-full w-full flex-col gap-4 space-y-3 transition-opacity duration-300 ease-out"
             >
               <AgentChatTranscript
                 agentState={agentState}
@@ -251,18 +273,20 @@ export function AgentSessionView_01({
         </AnimatePresence>
       </div>
       {/* Tile layout */}
-      <TileLayout
-        chatOpen={chatOpen}
-        audioVisualizerType={audioVisualizerType}
-        audioVisualizerColor={audioVisualizerColor}
-        audioVisualizerColorShift={audioVisualizerColorShift}
-        audioVisualizerBarCount={audioVisualizerBarCount}
-        audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
-        audioVisualizerRadialRadius={audioVisualizerRadialRadius}
-        audioVisualizerGridRowCount={audioVisualizerGridRowCount}
-        audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
-        audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
-      />
+      <div className="pointer-events-auto h-full w-full">
+        <TileLayout
+          chatOpen={chatOpen}
+          audioVisualizerType={audioVisualizerType}
+          audioVisualizerColor={audioVisualizerColor}
+          audioVisualizerColorShift={audioVisualizerColorShift}
+          audioVisualizerBarCount={audioVisualizerBarCount}
+          audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+          audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+          audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+          audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+          audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+        />
+      </div>
       {/* Bottom */}
       <motion.div
         {...BOTTOM_VIEW_MOTION_PROPS}
@@ -284,7 +308,7 @@ export function AgentSessionView_01({
             )}
           </AnimatePresence>
         )}
-        <div className="bg-background relative mx-auto max-w-2xl pb-3 md:pb-12">
+        <div className="bg-background pointer-events-auto relative mx-auto max-w-2xl pb-3 md:pb-12">
           <Fade bottom className="absolute inset-x-0 top-0 h-4 -translate-y-full" />
           <AgentControlBar
             variant="livekit"
@@ -293,6 +317,21 @@ export function AgentSessionView_01({
             isConnected={session.isConnected}
             onDisconnect={handleDisconnect}
             onIsChatOpenChange={handleChatToggle}
+            onDeviceError={(error) => {
+              dbg('DEVICE-ERROR', 'Device error:', error);
+              if (
+                error.source === Track.Source.Microphone &&
+                (error.error.message.includes('NotAllowedError') ||
+                  error.error.name === 'NotAllowedError')
+              ) {
+                toast.error('Microphone Access Blocked', {
+                  description:
+                    'Microphone access is required. Please click the padlock in your browser address bar to allow microphone access, then refresh the page.',
+                  duration: 10000,
+                });
+                session.end();
+              }
+            }}
           />
         </div>
       </motion.div>

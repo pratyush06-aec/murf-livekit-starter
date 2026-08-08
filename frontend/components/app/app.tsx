@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { TokenSource } from 'livekit-client';
 import { useSession } from '@livekit/components-react';
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr';
@@ -35,7 +35,10 @@ interface AppProps {
 export function App({ appConfig }: AppProps) {
   dbg('INIT', '─── App component rendering ───');
   dbg('INIT', 'appConfig:', JSON.stringify(appConfig, null, 2));
-  dbg('INIT', `NEXT_PUBLIC_CONN_DETAILS_ENDPOINT=${process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? 'NOT SET'}`);
+  dbg(
+    'INIT',
+    `NEXT_PUBLIC_CONN_DETAILS_ENDPOINT=${process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? 'NOT SET'}`
+  );
   dbg('INIT', `NODE_ENV=${process.env.NODE_ENV}, IN_DEVELOPMENT=${IN_DEVELOPMENT}`);
 
   const tokenSource = useMemo(() => {
@@ -66,8 +69,10 @@ export function App({ appConfig }: AppProps) {
   return (
     <AgentSessionProvider session={session}>
       <AppSetup />
-      <main className="grid h-svh grid-cols-1 place-content-center">
-        <ViewController appConfig={appConfig} />
+      <main className="relative grid h-svh grid-cols-1 place-content-center overflow-hidden bg-black">
+        <div className="pointer-events-none relative z-10 grid h-full w-full place-content-center">
+          <ViewController appConfig={appConfig} />
+        </div>
       </main>
       <StartAudioButton label="Start Audio" />
       <Toaster

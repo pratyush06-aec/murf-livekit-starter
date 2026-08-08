@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     } else {
       dbg('ROOM-CONFIG', 'No room_config and no AGENT_NAME — using default dispatch');
     }
-      
+
     // Generate participant token
     const participantName = 'user';
     const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
@@ -90,7 +90,10 @@ export async function POST(req: Request) {
       participantToken,
     };
 
-    dbg('RESPONSE', `✅ Returning connection details: serverUrl=${data.serverUrl}, room=${data.roomName}`);
+    dbg(
+      'RESPONSE',
+      `✅ Returning connection details: serverUrl=${data.serverUrl}, room=${data.roomName}`
+    );
 
     const headers = new Headers({
       'Cache-Control': 'no-store',

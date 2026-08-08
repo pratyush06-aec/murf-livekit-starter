@@ -14,7 +14,7 @@ export interface AppConfig {
   logoDark?: string;
   accentDark?: string;
 
-  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
+  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura' | 'sphere';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorDark?: `#${string}`;
   audioVisualizerColorShift?: number;
@@ -33,9 +33,9 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
-  companyName: 'Murf AI',
-  pageTitle: 'Voice Agent Starter',
-  pageDescription: 'A voice agent powered by Murf Falcon — the fastest TTS API',
+  companyName: 'Disaster Response Authority',
+  pageTitle: 'Pooja - Flood Emergency Hotline',
+  pageDescription: '24/7 Voice AI for Flood Alerts and Emergency Triage',
 
   supportsChatInput: true,
   supportsVideoInput: true,
@@ -43,15 +43,16 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
   isPreConnectBufferEnabled: true,
 
   logo: '/murf-logo.svg',
-  accent: '#6366F1',
+  accent: '#ef4444',
   logoDark: '/murf-logo-dark.svg',
-  accentDark: '#818cf8',
-  startButtonText: 'Start talking',
+  accentDark: '#ef4444',
+  startButtonText: 'Connect to Pooja (Emergency)',
 
   // optional: audio visualization configuration
-  // audioVisualizerType: 'bar',
-  // audioVisualizerColor: '#002cf2',
-  // audioVisualizerColorDark: '#1fd5f9',
+  audioVisualizerType: 'wave',
+  audioVisualizerColor: '#ef4444',
+  audioVisualizerColorDark: '#ef4444',
+  audioVisualizerWaveLineWidth: 3,
   // audioVisualizerColorShift: 0.3,
   // audioVisualizerBarCount: 5,
   // audioVisualizerType: 'radial',
