@@ -207,6 +207,37 @@ export function AgentSessionView_01({
   }, [agentState]);
 
   useEffect(() => {
+    let permissionStatus: PermissionStatus | null = null;
+    const handlePermissionChange = () => {
+      if (permissionStatus && permissionStatus.state !== 'granted') {
+        toast.error('Microphone Access Blocked', {
+          description:
+            'Microphone access is required. Please click the padlock in your browser address bar to allow microphone access, then refresh the page.',
+          duration: 10000,
+        });
+        // optional: force end session if access is revoked
+        if (session.isConnected) {
+           session.end();
+        }
+      }
+    };
+    navigator.permissions
+      .query({ name: 'microphone' as PermissionName })
+      .then((status) => {
+        permissionStatus = status;
+        status.addEventListener('change', handlePermissionChange);
+      })
+      .catch((err) => {
+        console.warn('Could not query microphone permission', err);
+      });
+    return () => {
+      if (permissionStatus) {
+        permissionStatus.removeEventListener('change', handlePermissionChange);
+      }
+    };
+  }, [session]);
+
+  useEffect(() => {
     dbg('MESSAGES', `Message count changed → ${messages.length}`);
     if (messages.length > 0) {
       const last = messages.at(-1);
