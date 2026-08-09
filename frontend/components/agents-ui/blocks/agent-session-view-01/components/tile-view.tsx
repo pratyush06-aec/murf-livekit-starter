@@ -37,7 +37,7 @@ const tileViewClassNames = {
   // hasSecondTile: false
   // layout: Column 1 / Row 1 / Column-Span 2
   // align: x-center y-center
-  agentChatOpenWithoutSecondTile: ['col-start-1 row-start-1', 'col-span-2', 'place-content-center'],
+  agentChatOpenWithoutSecondTile: ['col-start-1 row-start-1', 'col-span-2 row-span-3', 'place-content-center'],
   // Agent
   // chatOpen: false
   // layout: Column 1 / Row 1 / Column-Span 2 / Row-Span 3
@@ -136,7 +136,7 @@ export function TileLayout({
                     <AudioVisualizer
                       key="audio-visualizer"
                       initial={{ scale: 1 }}
-                      animate={{ scale: chatOpen ? 0.2 : 1 }}
+                      animate={{ scale: 1 }}
                       transition={{
                         ...ANIMATION_TRANSITION,
                         delay: animationDelay,
@@ -192,14 +192,14 @@ export function TileLayout({
                   }}
                   className={cn(
                     'overflow-hidden bg-black drop-shadow-xl/80',
-                    chatOpen ? 'h-[90px]' : 'h-auto w-full'
+                    'h-auto w-full'
                   )}
                 >
                   <VideoTrack
                     width={videoWidth}
                     height={videoHeight}
                     trackRef={agentVideoTrack}
-                    className={cn(chatOpen && 'size-[90px] object-cover')}
+                    className=""
                   />
                 </motion.div>
               )}
