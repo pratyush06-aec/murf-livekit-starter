@@ -11,6 +11,7 @@ import {
   type AgentControlBarControls,
 } from '@/components/agents-ui/agent-control-bar';
 import { ThreeKinectBackground } from '@/components/agents-ui/three-kinect-background';
+import { FireflyParticles } from '@/components/agents-ui/firefly-particles';
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/shadcn/utils';
 import { AudioVisualizer } from './audio-visualizer';
@@ -276,6 +277,7 @@ export function AgentSessionView_01({
       {...props}
     >
       <ThreeKinectBackground />
+      <FireflyParticles />
       {audioVisualizerType === 'sphere' && (
         <div className="pointer-events-auto absolute inset-0 z-0 h-full w-full">
           <AudioVisualizer
