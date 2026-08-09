@@ -10,11 +10,12 @@ import React, {
   useMemo,
 } from 'react';
 import { type VariantProps, cva } from 'class-variance-authority';
-import { type LocalAudioTrack, type RemoteAudioTrack } from 'livekit-client';
+import { type LocalAudioTrack, type RemoteAudioTrack, Track } from 'livekit-client';
 import {
   type AgentState,
   type TrackReferenceOrPlaceholder,
   useMultibandTrackVolume,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import { useAgentAudioVisualizerBarAnimator } from '@/hooks/agents-ui/use-agent-audio-visualizer-bar';
 import { cn } from '@/lib/shadcn/utils';
@@ -159,6 +160,14 @@ export function AgentAudioVisualizerBar({
     }
   }, [barCount, size]);
 
+  const { localParticipant } = useLocalParticipant();
+  const localMicTrack = localParticipant?.getTrackPublication(Track.Source.Microphone)?.track;
+  const localVolumeBands = useMultibandTrackVolume(localMicTrack, {
+    bands: _barCount,
+    loPass: 100,
+    hiPass: 200,
+  });
+
   const volumeBands = useMultibandTrackVolume(audioTrack, {
     bands: _barCount,
     loPass: 100,
@@ -187,8 +196,12 @@ export function AgentAudioVisualizerBar({
   );
 
   const bands = useMemo(
-    () => (state === 'speaking' ? volumeBands : new Array(_barCount).fill(0)),
-    [state, volumeBands, _barCount]
+    () => {
+      if (state === 'speaking') return volumeBands;
+      if (state === 'listening') return localVolumeBands;
+      return new Array(_barCount).fill(0);
+    },
+    [state, volumeBands, localVolumeBands, _barCount]
   );
 
   if (children && Array.isArray(children)) {

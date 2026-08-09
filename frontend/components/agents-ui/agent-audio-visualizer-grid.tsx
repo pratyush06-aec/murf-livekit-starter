@@ -11,11 +11,12 @@ import React, {
   useMemo,
 } from 'react';
 import { type VariantProps, cva } from 'class-variance-authority';
-import { LocalAudioTrack, RemoteAudioTrack } from 'livekit-client';
+import { LocalAudioTrack, RemoteAudioTrack, Track } from 'livekit-client';
 import {
   type AgentState,
   type TrackReferenceOrPlaceholder,
   useMultibandTrackVolume,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import {
   type Coordinate,
@@ -257,11 +258,25 @@ export function AgentAudioVisualizerGrid({
     interval,
     radius
   );
-  const volumeBands = useMultibandTrackVolume(audioTrack, {
+  const { localParticipant } = useLocalParticipant();
+  const localMicTrack = localParticipant?.getTrackPublication(Track.Source.Microphone)?.track;
+  const localVolumeBands = useMultibandTrackVolume(localMicTrack, {
     bands: columnCount,
     loPass: 100,
     hiPass: 200,
   });
+
+  const remoteVolumeBands = useMultibandTrackVolume(audioTrack, {
+    bands: columnCount,
+    loPass: 100,
+    hiPass: 200,
+  });
+
+  const volumeBands = useMemo(() => {
+    if (state === 'speaking') return remoteVolumeBands;
+    if (state === 'listening') return localVolumeBands;
+    return new Array(columnCount).fill(0);
+  }, [state, remoteVolumeBands, localVolumeBands, columnCount]);
 
   if (children && Array.isArray(children)) {
     throw new Error('AgentAudioVisualizerGrid children must be a single element.');

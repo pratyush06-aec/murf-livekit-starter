@@ -2,11 +2,12 @@
 
 import { type CSSProperties, type ComponentProps, useMemo } from 'react';
 import { type VariantProps, cva } from 'class-variance-authority';
-import { type LocalAudioTrack, type RemoteAudioTrack } from 'livekit-client';
+import { type LocalAudioTrack, type RemoteAudioTrack, Track } from 'livekit-client';
 import {
   type AgentState,
   type TrackReferenceOrPlaceholder,
   useMultibandTrackVolume,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import { useAgentAudioVisualizerRadialAnimator } from '@/hooks/agents-ui/use-agent-audio-visualizer-radial';
 import { cn } from '@/lib/shadcn/utils';
@@ -120,7 +121,15 @@ export function AgentAudioVisualizerRadial({
     }
   }, [barCount, size]);
 
-  const volumeBands = useMultibandTrackVolume(audioTrack, {
+  const { localParticipant } = useLocalParticipant();
+  const localMicTrack = localParticipant?.getTrackPublication(Track.Source.Microphone)?.track;
+  const localVolumeBands = useMultibandTrackVolume(localMicTrack, {
+    bands: _barCount,
+    loPass: 100,
+    hiPass: 200,
+  });
+
+  const remoteVolumeBands = useMultibandTrackVolume(audioTrack, {
     bands: _barCount,
     loPass: 100,
     hiPass: 200,
@@ -168,9 +177,14 @@ export function AgentAudioVisualizerRadial({
     _barCount,
     sequencerInterval
   );
+  
   const bands = useMemo(
-    () => (audioTrack ? volumeBands : new Array(_barCount).fill(0)),
-    [audioTrack, volumeBands, _barCount]
+    () => {
+      if (state === 'speaking') return remoteVolumeBands;
+      if (state === 'listening') return localVolumeBands;
+      return new Array(_barCount).fill(0);
+    },
+    [state, remoteVolumeBands, localVolumeBands, _barCount]
   );
 
   const dotSize = useMemo(() => {
@@ -203,7 +217,7 @@ export function AgentAudioVisualizerRadial({
               style={{
                 width: dotSize,
                 minHeight: dotSize,
-                height: state === 'speaking' ? `${dotSize * 10 * band}px` : 0,
+                height: (state === 'speaking' || state === 'listening') ? `${dotSize * 10 * band}px` : 0,
               }}
             />
           </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type LocalAudioTrack, type RemoteAudioTrack } from 'livekit-client';
+import { type LocalAudioTrack, type RemoteAudioTrack, Track } from 'livekit-client';
 import {
   type AnimationPlaybackControlsWithThen,
   type ValueAnimationTransition,
@@ -12,6 +12,7 @@ import {
   type TrackReference,
   type TrackReferenceOrPlaceholder,
   useTrackVolume,
+  useLocalParticipant,
 } from '@livekit/components-react';
 
 const DEFAULT_SPEED = 10;
@@ -56,6 +57,13 @@ export function useAgentAudioVisualizerAura(
   const { value: amplitude, animate: animateAmplitude } = useAnimatedValue(DEFAULT_AMPLITUDE);
   const { value: frequency, animate: animateFrequency } = useAnimatedValue(DEFAULT_FREQUENCY);
   const { value: brightness, animate: animateBrightness } = useAnimatedValue(DEFAULT_BRIGHTNESS);
+
+  const { localParticipant } = useLocalParticipant();
+  const localMicTrack = localParticipant?.getTrackPublication(Track.Source.Microphone)?.track;
+  const localVolume = useTrackVolume(localMicTrack as TrackReference, {
+    fftSize: 512,
+    smoothingTimeConstant: 0.55,
+  });
 
   const volume = useTrackVolume(audioTrack as TrackReference, {
     fftSize: 512,
@@ -103,10 +111,13 @@ export function useAgentAudioVisualizerAura(
   useEffect(() => {
     if (state === 'speaking' && volume > 0 && !scaleMotionValue.isAnimating()) {
       animateScale(0.2 + 0.2 * volume, { duration: 0 });
+    } else if (state === 'listening' && localVolume > 0 && !scaleMotionValue.isAnimating()) {
+      animateScale(0.2 + 0.2 * localVolume, { duration: 0 });
     }
   }, [
     state,
     volume,
+    localVolume,
     scaleMotionValue,
     animateScale,
     animateAmplitude,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LocalAudioTrack, RemoteAudioTrack } from 'livekit-client';
+import { LocalAudioTrack, RemoteAudioTrack, Track } from 'livekit-client';
 import {
   type AnimationPlaybackControlsWithThen,
   type ValueAnimationTransition,
@@ -12,6 +12,7 @@ import {
   type TrackReference,
   type TrackReferenceOrPlaceholder,
   useTrackVolume,
+  useLocalParticipant,
 } from '@livekit/components-react';
 
 const DEFAULT_SPEED = 5;
@@ -49,6 +50,13 @@ export function useAgentAudioVisualizerWave({
   const { value: frequency, animate: animateFrequency } = useAnimatedValue(DEFAULT_FREQUENCY);
   const { value: opacity, animate: animateOpacity } = useAnimatedValue(1.0);
 
+  const { localParticipant } = useLocalParticipant();
+  const localMicTrack = localParticipant?.getTrackPublication(Track.Source.Microphone)?.track;
+  const localVolume = useTrackVolume(localMicTrack as TrackReference, {
+    fftSize: 512,
+    smoothingTimeConstant: 0.55,
+  });
+
   const volume = useTrackVolume(audioTrack as TrackReference, {
     fftSize: 512,
     smoothingTimeConstant: 0.55,
@@ -63,9 +71,9 @@ export function useAgentAudioVisualizerWave({
         animateOpacity(1.0, DEFAULT_TRANSITION);
         return;
       case 'listening':
+        // When listening, the opacity pulses by default, but we'll still let it pulse.
+        // The amplitude/frequency will be driven by localVolume below.
         setSpeed(DEFAULT_SPEED);
-        animateAmplitude(DEFAULT_AMPLITUDE, DEFAULT_TRANSITION);
-        animateFrequency(DEFAULT_FREQUENCY, DEFAULT_TRANSITION);
         animateOpacity([1.0, 0.3], {
           duration: 0.75,
           repeat: Infinity,
@@ -87,8 +95,6 @@ export function useAgentAudioVisualizerWave({
       case 'speaking':
       default:
         setSpeed(DEFAULT_SPEED * 2);
-        animateAmplitude(DEFAULT_AMPLITUDE, DEFAULT_TRANSITION);
-        animateFrequency(DEFAULT_FREQUENCY, DEFAULT_TRANSITION);
         animateOpacity(1.0, DEFAULT_TRANSITION);
         return;
     }
@@ -98,8 +104,11 @@ export function useAgentAudioVisualizerWave({
     if (state === 'speaking') {
       animateAmplitude(0.015 + 0.4 * volume, { duration: 0 });
       animateFrequency(20 + 60 * volume, { duration: 0 });
+    } else if (state === 'listening') {
+      animateAmplitude(DEFAULT_AMPLITUDE + 0.4 * localVolume, { duration: 0 });
+      animateFrequency(DEFAULT_FREQUENCY + 60 * localVolume, { duration: 0 });
     }
-  }, [state, volume, animateAmplitude, animateFrequency]);
+  }, [state, volume, localVolume, animateAmplitude, animateFrequency]);
 
   return {
     speed,
