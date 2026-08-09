@@ -48,11 +48,15 @@ void main() {
   // Calculate brightness to preserve the original shading
   float brightness = (color.r + color.g + color.b) / 3.0;
   
+  // Fade out the dark background/shadows smoothly
+  // Points with brightness < 0.1 become completely transparent
+  float alpha = smoothstep(0.1, 0.3, brightness) * 0.4;
+  
   // Orangish-yellowish tint (RGB: 1.0, 0.7, 0.1)
   vec3 tint = vec3(1.0, 0.7, 0.1);
   
-  // Apply tint and preserve the original alpha transparency
-  gl_FragColor = vec4( tint * (brightness + 0.2), 0.3 );
+  // Apply tint and dynamic alpha
+  gl_FragColor = vec4( tint * (brightness + 0.2), alpha );
 }
 `;
 
