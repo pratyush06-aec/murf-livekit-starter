@@ -38,6 +38,7 @@
     "cobe": "^2.0.1",
     "embla-carousel-react": "^8.6.0",
     "jose": "^6.0.12",
+    "lil-gui": "^0.21.0",
     "livekit-client": "^2.17.2",
     "livekit-server-sdk": "^2.13.3",
     "lucide-react": "^0.555.0",
