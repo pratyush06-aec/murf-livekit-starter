@@ -44,7 +44,15 @@ varying vec2 vUv;
 
 void main() {
   vec4 color = texture2D( map, vUv );
-  gl_FragColor = vec4( color.r, color.g, color.b, 0.2 );
+  
+  // Calculate brightness to preserve the original shading
+  float brightness = (color.r + color.g + color.b) / 3.0;
+  
+  // Orangish-yellowish tint (RGB: 1.0, 0.7, 0.1)
+  vec3 tint = vec3(1.0, 0.7, 0.1);
+  
+  // Apply tint and preserve the original alpha transparency
+  gl_FragColor = vec4( tint * (brightness + 0.2), 0.3 );
 }
 `;
 
@@ -184,7 +192,7 @@ export function ThreeKinectBackground() {
         <source src="/textures/kinect.webm" type="video/webm" />
         <source src="/textures/kinect.mp4" type="video/mp4" />
       </video>
-      <div ref={mountRef} className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-100" />
+      <div ref={mountRef} className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-30" />
     </>
   );
 }
