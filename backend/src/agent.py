@@ -21,9 +21,14 @@ from livekit.agents import (
     cli,
     room_io,
     tokenize,
+    function_tool,
+    RunContext,
 )
 from livekit.plugins import deepgram, google, murf, noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
+
+import db
+db.init_db()
 
 # ── DEBUG: Configure logging ────────────────────────────────────────────────
 logging.basicConfig(
@@ -77,31 +82,49 @@ GUARDRAILS:
 - Never promise an exact rescue time. 
 - Escalation Script: If someone is in immediate life-threatening danger, state: "I am flagging your situation as a priority medical emergency for the rescue dispatch team right now."
 STYLE: Speak in very short, clear sentences. Keep your pace calm and steady. If the user goes silent, ask "Are you still there? Are you safe?"
+MEMORY & PERSISTENCE:
+- Whenever you learn new details about a caller's situation (location, household size, mobility needs), you MUST call the `save_caller_info` tool to save them.
+- Immediately after calling the save tool, inform the caller: "As this is a case of disaster, I'm saving your details by default, as it's required for the rescue process as well. Please don't panic."
+- When you are provided with a phone number in your context, use the `lookup_caller` tool. If they exist, greet them by name and reference their previous situation (e.g., "Namaste Ramesh, last time we spoke about your location. Are you still safe there?").
+- If the caller's phone number is missing or not provided automatically, politely ask them for their phone number to look up their previous records.
 """
 
 
 class Assistant(Agent):
-    def __init__(self) -> None:
-        # logger.debug("[AGENT] Assistant.__init__() — creating agent with system prompt (%d chars)", len(SYSTEM_PROMPT))
-        super().__init__(instructions=SYSTEM_PROMPT)
-        # logger.debug("[AGENT] Assistant.__init__() — agent created successfully")
+    def __init__(self, phone_number: str | None = None) -> None:
+        # Append phone number to prompt context if available
+        prompt = SYSTEM_PROMPT
+        if phone_number:
+            prompt += f"\n\n[SYSTEM] The caller's phone number is {phone_number}. Use lookup_caller right away to see if they are a returning caller."
+        else:
+            prompt += "\n\n[SYSTEM] No phone number was provided automatically. Ask the caller for their phone number to look them up."
+            
+        super().__init__(instructions=prompt)
 
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+    @function_tool
+    async def lookup_caller(self, context: RunContext, phone_number: str) -> str:
+        """Use this tool to look up a caller's previous details and facts using their phone number.
+        
+        Args:
+            phone_number: The phone number of the caller.
+        """
+        data = db.get_caller(phone_number)
+        if data:
+            return f"Found caller: {data}"
+        return "No previous records found for this phone number."
+
+    @function_tool
+    async def save_caller_info(self, context: RunContext, phone_number: str, name: str, language_preference: str, facts: str) -> str:
+        """Use this tool to save or update details about a caller.
+        
+        Args:
+            phone_number: The phone number of the caller.
+            name: The name of the caller.
+            language_preference: The caller's preferred language.
+            facts: A JSON string containing facts like location, household size, mobility needs, last check-in.
+        """
+        db.upsert_caller(phone_number, name, language_preference, facts)
+        return "Successfully saved caller details."
 
 
 server = AgentServer()
@@ -242,9 +265,13 @@ async def my_agent(ctx: JobContext):
     # ── DEBUG: Session start ────────────────────────────────────────────
     # logger.debug("[START] Starting session — connecting agent to room with noise cancellation...")
     try:
+        # Extract phone number from participant identity if available
+        remote_participant = next(iter(ctx.room.remote_participants.values()), None)
+        phone_number = remote_participant.identity if remote_participant else None
+
         # Start the session, which initializes the voice pipeline and warms up the models
         await session.start(
-            agent=Assistant(),
+            agent=Assistant(phone_number=phone_number),
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 audio_input=room_io.AudioInputOptions(
