@@ -28,6 +28,7 @@ from livekit.plugins import deepgram, google, murf, noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 import db
+import weather_api
 db.init_db()
 
 # ── DEBUG: Configure logging ────────────────────────────────────────────────
@@ -87,6 +88,13 @@ MEMORY & PERSISTENCE:
 - Immediately after calling the save tool, inform the caller: "As this is a case of disaster, I'm saving your details by default, as it's required for the rescue process as well. Please don't panic."
 - When you are provided with a phone number in your context, use the `lookup_caller` tool. If they exist, greet them by name and reference their previous situation (e.g., "Namaste Ramesh, last time we spoke about your location. Are you still safe there?").
 - If the caller's phone number is missing or not provided automatically, politely ask them for their phone number to look up their previous records.
+LIVE DATA ALERTS:
+- Use the `get_district_alert` tool whenever a caller asks about flood warnings, weather forecasts, or safety status.
+- IMPORTANT: If the caller asks for weather in "this location" or their location is unknown, you MUST ask them to clarify which district they are in BEFORE calling the tool. Do not pass "this location" to the tool.
+- The tool returns CURRENT weather and a 2-hour forecast. Use this data to answer the user's question.
+- When reading alerts returned by the tool, speak the warning naturally (e.g., "Yes, there is an orange warning..."). Do not read raw JSON aloud.
+- Always explicitly state when the data is from (e.g., "As of today's latest report...").
+- If the tool returns an error status (e.g., "I'm currently unable to reach the meteorological live feed"), you MUST speak that exact fallback message out loud, and then ask the user how else you can help them. DO NOT call the tool again.
 """
 
 
@@ -125,6 +133,15 @@ class Assistant(Agent):
         """
         db.upsert_caller(phone_number, name, language_preference, facts)
         return "Successfully saved caller details."
+
+    @function_tool
+    async def get_district_alert(self, context: RunContext, district_name: str) -> str:
+        """Use this tool whenever a caller asks about flood warnings, weather alerts, forecasts, or safety status.
+        
+        Args:
+            district_name: The SPECIFIC name of the district (e.g. "Kolkata", "Bardhaman"). Never use generic terms like "this location".
+        """
+        return await weather_api.fetch_district_alert(district_name)
 
 
 server = AgentServer()
