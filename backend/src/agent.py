@@ -97,11 +97,24 @@ LIVE DATA ALERTS:
 - If the tool returns an error status (e.g., "I'm currently unable to reach the meteorological live feed"), you MUST speak that exact fallback message out loud, and then ask the user how else you can help them. DO NOT call the tool again.
 """
 
+OUTBOUND_PROMPT_ADDENDUM = """
+OUTBOUND CALL RULES:
+- You are making an OUTBOUND welfare check call. The person did NOT call you — you called THEM.
+- In your very first message, you MUST do all three of the following in order:
+  1. Say who you are: "Hello, this is Pooja, an AI assistant from the Regional Emergency Management Authority."
+  2. Say why you are calling: "I am calling to perform a routine welfare check because your household is flagged in a vulnerable district."
+  3. Tell them how to stop: "If you do not wish to speak, just say Stop and I will end this call immediately."
+- If the person says "Stop", "Hang up", or any clear refusal, respond with "Thank you. Stay safe." and do NOT continue the conversation.
+- After your introduction, proceed normally with triage and safety checks.
+"""
+
 
 class Assistant(Agent):
-    def __init__(self, phone_number: str | None = None) -> None:
+    def __init__(self, phone_number: str | None = None, is_outbound: bool = False) -> None:
         # Append phone number to prompt context if available
         prompt = SYSTEM_PROMPT
+        if is_outbound:
+            prompt += OUTBOUND_PROMPT_ADDENDUM
         if phone_number:
             prompt += f"\n\n[SYSTEM] The caller's phone number is {phone_number}. Use lookup_caller right away to see if they are a returning caller."
         else:
@@ -286,9 +299,12 @@ async def my_agent(ctx: JobContext):
         remote_participant = next(iter(ctx.room.remote_participants.values()), None)
         phone_number = remote_participant.identity if remote_participant else None
 
+        # Detect if this is an outbound call (room name starts with "outbound-")
+        is_outbound = ctx.room.name.startswith("outbound-")
+
         # Start the session, which initializes the voice pipeline and warms up the models
         await session.start(
-            agent=Assistant(phone_number=phone_number),
+            agent=Assistant(phone_number=phone_number, is_outbound=is_outbound),
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 audio_input=room_io.AudioInputOptions(
@@ -316,7 +332,16 @@ async def my_agent(ctx: JobContext):
         # Adding a brief delay ensures the frontend audio tracks are fully mounted before speaking
         import asyncio
         await asyncio.sleep(1.5)
-        await session.say("Namaste, emergency flood response. This is Pooja. Are you safe right now?", allow_interruptions=True)
+        if is_outbound:
+            await session.say(
+                "Hello, this is Pooja, an AI assistant from the Regional Emergency Management Authority. "
+                "I am calling to perform a routine welfare check because your household is flagged in a vulnerable district. "
+                "If you do not wish to speak, just say Stop and I will end this call immediately. "
+                "Are you and your family safe right now?",
+                allow_interruptions=True,
+            )
+        else:
+            await session.say("Namaste, emergency flood response. This is Pooja. Are you safe right now?", allow_interruptions=True)
         # logger.debug("[CONNECT] ctx.connect() completed — agent is now in the room")
     except Exception as e:
         # logger.error("[CONNECT] ctx.connect() FAILED: %s", e)
