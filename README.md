@@ -6,8 +6,9 @@ An advanced, real-time voice AI assistant designed for emergency disaster respon
 
 *   **Ultra-Low Latency Voice Pipeline:** Seamless conversational flow using Deepgram Nova-3 for Speech-to-Text, Gemini for intelligent routing, and Murf Falcon for hyper-realistic Text-to-Speech.
 *   **Proactive Outbound Calling:** Capable of initiating SIP outbound calls to real phone numbers (via Twilio and LiveKit Cloud) to perform routine welfare checks with a custom, outbound-specific AI persona.
+*   **Human-in-the-Loop Escalation:** Seamlessly escalates critical emergencies by dynamically dispatching high-priority alerts with detailed summaries and reference IDs directly to a Slack workspace via webhooks.
 *   **Multilingual Support:** Fully bilingual capabilities, seamlessly switching between English and Hindi (including Hinglish), adapting to the caller's language register.
-*   **Persistent Caller Memory:** Integrates a local SQLite database to securely save caller profiles (location, household size, medical needs) by phone number. When callers return, the agent greets them by name and recalls their previous situation.
+*   **Persistent Caller Memory:** Integrates a local SQLite database to securely save caller profiles (location, household size, medical needs) and emergency escalation tickets by phone number. When callers return, the agent greets them by name and recalls their previous situation.
 *   **Live Disaster Alerts & Forecasts:** Dynamically fetches real-time severe weather alerts and 2-hour forecasts for any specified district.
 *   **Graceful Fallbacks:** Built-in network resiliency ensures the agent gracefully handles API failures (like losing connection to the weather database) by verbally informing the user instead of crashing or hallucinating.
 
@@ -47,6 +48,7 @@ The Gemini LLM is equipped with specialized function tools to autonomously assis
 *   `lookup_caller(phone_number)`: Retrieves persistent details (name, language, previous facts) from SQLite to provide contextual greetings.
 *   `save_caller_info(...)`: Upserts newly learned facts (location, household size, medical needs) into the SQLite database.
 *   `get_district_alert(district_name)`: Triggers the `weather_api.py` module to fetch live disaster alerts and rain forecasts from Open-Meteo.
+*   `create_escalation(...)`: Used during critical emergencies to log an escalation ticket into the local database and instantly notify human operators via a Slack webhook.
 
 ---
 
@@ -96,6 +98,9 @@ GOOGLE_API_KEY=your_gemini_key_here
 
 # Required for Outbound Telephony Calling
 SIP_OUTBOUND_TRUNK_ID=ST_xxxxxxxxxxxx
+
+# Required for Human Escalation Alerts
+SLACK_WEBHOOK_URL=your_slack_webhook_url_here
 ```
 
 **Frontend (`frontend/.env.local`):**
@@ -147,7 +152,7 @@ murf-livekit-starter/
 ├── backend/                  # Python voice agent worker
 │   ├── src/
 │   │   ├── agent.py          # Agent entrypoint, system prompt, and tools
-│   │   ├── db.py             # SQLite wrapper for persistent memory
+│   │   ├── db.py             # SQLite wrapper for persistent memory and escalations
 │   │   └── weather_api.py    # Open-Meteo live API integration
 │   ├── outbound_trigger.py   # Script to dispatch agent and initiate SIP calls
 │   ├── caller_data.db        # Auto-generated SQLite memory storage
