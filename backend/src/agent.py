@@ -2,6 +2,10 @@ import logging
 import os
 import sys
 import traceback
+import json
+import random
+import string
+import aiohttp
 from pathlib import Path
 
 # Force utf-8 encoding for standard output to prevent LiveKit CLI rich console crashes on Windows
@@ -95,6 +99,15 @@ LIVE DATA ALERTS:
 - When reading alerts returned by the tool, speak the warning naturally (e.g., "Yes, there is an orange warning..."). Do not read raw JSON aloud.
 - Always explicitly state when the data is from (e.g., "As of today's latest report...").
 - If the tool returns an error status (e.g., "I'm currently unable to reach the meteorological live feed"), you MUST speak that exact fallback message out loud, and then ask the user how else you can help them. DO NOT call the tool again.
+ESCALATION TO HUMAN OPERATORS:
+- You must escalate the call to a human operator if:
+  1. The caller is trapped, injured, or requires urgent physical rescue.
+  2. The caller reports a critical infrastructure failure (e.g., dam break, bridge collapse) that needs immediate human verification.
+- STRICT ESCALATION WORKFLOW:
+  1. Summarize the situation briefly to the caller.
+  2. Ask for their permission to send their details to a human rescue operator.
+  3. If they say YES, call the `create_escalation` tool immediately.
+  4. After the tool returns a Reference ID, give this Reference ID to the caller and explain what will happen next (e.g., "A human rescue coordinator will review your case shortly.").
 """
 
 OUTBOUND_PROMPT_ADDENDUM = """
@@ -142,10 +155,50 @@ class Assistant(Agent):
             phone_number: The phone number of the caller.
             name: The name of the caller.
             language_preference: The caller's preferred language.
-            facts: A JSON string containing facts like location, household size, mobility needs, last check-in.
+            facts: A JSON string containing facts like location, household size, medical needs.
         """
         db.upsert_caller(phone_number, name, language_preference, facts)
-        return "Successfully saved caller details."
+        return "Caller info saved successfully."
+
+    @function_tool
+    async def create_escalation(self, context: RunContext, phone_number: str, who_needs_help: str, what_happened: str, agent_checked: str, urgency: str, language_followup: str) -> str:
+        """Use this tool to escalate a critical situation to a human operator.
+        
+        Args:
+            phone_number: The phone number of the caller.
+            who_needs_help: Description of who needs help.
+            what_happened: Description of the incident or situation.
+            agent_checked: What the agent has already checked or verified.
+            urgency: The urgency level (e.g., Low, Medium, High, Critical).
+            language_followup: The caller's language and preferred follow-up method.
+        """
+        reference_id = "ESC-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        db.create_escalation_record(
+            reference_id, phone_number, who_needs_help, what_happened, agent_checked, urgency, language_followup
+        )
+
+        slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+        if slack_webhook_url:
+            try:
+                payload = {
+                    "text": f"🚨 *New Emergency Escalation ({reference_id})* 🚨\n\n"
+                            f"*Phone Number:* {phone_number}\n"
+                            f"*Who needs help:* {who_needs_help}\n"
+                            f"*What happened:* {what_happened}\n"
+                            f"*Agent checked:* {agent_checked}\n"
+                            f"*Urgency:* {urgency}\n"
+                            f"*Language & Follow-up:* {language_followup}"
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(slack_webhook_url, json=payload) as response:
+                        if response.status not in (200, 201, 204):
+                            logger.error("Failed to send Slack webhook: %s", await response.text())
+            except Exception as e:
+                logger.error("Error sending Slack webhook: %s", e)
+        else:
+            logger.warning("SLACK_WEBHOOK_URL not set. Escalation saved to DB but not sent to Slack.")
+
+        return f"Escalation ticket created successfully. The Reference ID is {reference_id}."
 
     @function_tool
     async def get_district_alert(self, context: RunContext, district_name: str) -> str:

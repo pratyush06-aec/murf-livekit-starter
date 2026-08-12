@@ -34,3 +34,6 @@ KMS
 
 #Database
 caller_data.db
+
+# Test scripts
+test_apis.py

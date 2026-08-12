@@ -19,6 +19,19 @@ def init_db():
                     last_interaction DATETIME
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS escalations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    reference_id TEXT,
+                    phone_number TEXT,
+                    who_needs_help TEXT,
+                    what_happened TEXT,
+                    agent_checked TEXT,
+                    urgency TEXT,
+                    language_followup TEXT,
+                    timestamp DATETIME
+                )
+            ''')
             conn.commit()
     except Exception as e:
         logger.error("Failed to initialize database: %s", e)
@@ -66,3 +79,16 @@ def upsert_caller(user_id: str, name: str, language_preference: str, facts: str 
             conn.commit()
     except Exception as e:
         logger.error("Failed to upsert caller data: %s", e)
+
+def create_escalation_record(reference_id: str, phone_number: str, who_needs_help: str, what_happened: str, agent_checked: str, urgency: str, language_followup: str):
+    try:
+        now = datetime.utcnow().isoformat()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO escalations (reference_id, phone_number, who_needs_help, what_happened, agent_checked, urgency, language_followup, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (reference_id, phone_number, who_needs_help, what_happened, agent_checked, urgency, language_followup, now))
+            conn.commit()
+    except Exception as e:
+        logger.error("Failed to create escalation record: %s", e)
