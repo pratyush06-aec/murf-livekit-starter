@@ -53,10 +53,27 @@ interface CallStats {
 }
 
 export default function DashboardPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<CallStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  useEffect(() => {
+    if (stats !== null) {
+      const ctx = gsap.context(() => {
+        gsap.from(".card", {
+          x: (i) => i % 2 === 0 ? -100 : 100,
+          opacity: 0, 
+          duration: 1.2,
+          stagger: 0.15,
+          ease: "power3.out",
+          clearProps: "all"
+        });
+      }, containerRef);
+      return () => ctx.revert();
+    }
+  }, [stats !== null]);
 
   const fetchStats = async () => {
     try {
@@ -88,6 +105,7 @@ export default function DashboardPage() {
     <>
       <ShaderBackground />
       <div
+        ref={containerRef}
         style={{
           minHeight: "100vh",
           color: "#e0e0e0",
@@ -161,6 +179,7 @@ export default function DashboardPage() {
           >
             {/* Total Calls */}
             <div
+              className="card"
               style={{
                 background: "rgba(255, 255, 255, 0.05)",
                 backdropFilter: "blur(10px)",
@@ -181,6 +200,7 @@ export default function DashboardPage() {
 
             {/* Successful Calls */}
             <div
+              className="card"
               style={{
                 background: "rgba(34, 197, 94, 0.08)",
                 backdropFilter: "blur(10px)",
@@ -201,6 +221,7 @@ export default function DashboardPage() {
 
             {/* Failed Calls */}
             <div
+              className="card"
               style={{
                 background: "rgba(239, 68, 68, 0.08)",
                 backdropFilter: "blur(10px)",
@@ -222,6 +243,7 @@ export default function DashboardPage() {
 
           {/* Success Rate Bar */}
           <div
+            className="card"
             style={{
               maxWidth: "800px",
               width: "100%",
@@ -267,26 +289,6 @@ export default function DashboardPage() {
                 }}
               />
             </div>
-          </div>
-
-          {/* Footer */}
-          <div style={{ fontSize: "12px", color: "#4a5568", marginTop: "16px" }}>
-            Auto-refreshes every 5 seconds · Last updated: {lastUpdated}
-          </div>
-
-          {/* Privacy Notice */}
-          <div
-            style={{
-              marginTop: "32px",
-              maxWidth: "500px",
-              textAlign: "center",
-              fontSize: "12px",
-              color: "#4a5568",
-              lineHeight: 1.6,
-            }}
-          >
-            🔒 This dashboard displays aggregate metrics only. No personally identifiable information,
-            phone numbers, medical details, or conversation transcripts are shown.
           </div>
         </>
       )}
