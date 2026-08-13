@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ShaderBackground from "./ShaderBackground";
 
 interface CallStats {
   total: number;
@@ -41,29 +42,32 @@ export default function DashboardPage() {
       : 0;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)",
-        color: "#e0e0e0",
-        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "40px 20px",
-      }}
-    >
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "48px" }}>
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: 700,
-            color: "#ffffff",
-            margin: 0,
-            letterSpacing: "-0.5px",
-          }}
-        >
+    <>
+      <ShaderBackground />
+      <div
+        style={{
+          minHeight: "100vh",
+          color: "#e0e0e0",
+          fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "40px 20px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <h1
+            style={{
+              fontSize: "32px",
+              fontWeight: 700,
+              color: "#ffffff",
+              margin: 0,
+              letterSpacing: "-0.5px",
+            }}
+          >
           📊 Call Analytics Dashboard
         </h1>
         <p
@@ -246,5 +250,6 @@ export default function DashboardPage() {
         </>
       )}
     </div>
+    </>
   );
 }
