@@ -6,9 +6,11 @@ An advanced, real-time voice AI assistant designed for emergency disaster respon
 
 *   **Ultra-Low Latency Voice Pipeline:** Seamless conversational flow using Deepgram Nova-3 for Speech-to-Text, Gemini for intelligent routing, and Murf Falcon for hyper-realistic Text-to-Speech.
 *   **Proactive Outbound Calling:** Capable of initiating SIP outbound calls to real phone numbers (via Twilio and LiveKit Cloud) to perform routine welfare checks with a custom, outbound-specific AI persona.
+*   **Real-Time Analytics Dashboard:** Includes a Next.js live dashboard (`/dashboard`) that tracks total calls, success rates, and live agent status by polling a lightweight Python daemon API.
 *   **Human-in-the-Loop Escalation:** Seamlessly escalates critical emergencies by dynamically dispatching high-priority alerts with detailed summaries and reference IDs directly to a Slack workspace via webhooks.
 *   **Multilingual Support:** Fully bilingual capabilities, seamlessly switching between English and Hindi (including Hinglish), adapting to the caller's language register.
 *   **Persistent Caller Memory:** Integrates a local SQLite database to securely save caller profiles (location, household size, medical needs) and emergency escalation tickets by phone number. When callers return, the agent greets them by name and recalls their previous situation.
+*   **Call Outcome Tracking:** Automatically tracks conversation resolutions (resolved, escalated, abandoned, etc.) storing structured end-of-call statuses in the database for compliance and dashboard metrics.
 *   **Live Disaster Alerts & Forecasts:** Dynamically fetches real-time severe weather alerts and 2-hour forecasts for any specified district.
 *   **Graceful Fallbacks:** Built-in network resiliency ensures the agent gracefully handles API failures (like losing connection to the weather database) by verbally informing the user instead of crashing or hallucinating.
 
@@ -49,6 +51,7 @@ The Gemini LLM is equipped with specialized function tools to autonomously assis
 *   `save_caller_info(...)`: Upserts newly learned facts (location, household size, medical needs) into the SQLite database.
 *   `get_district_alert(district_name)`: Triggers the `weather_api.py` module to fetch live disaster alerts and rain forecasts from Open-Meteo.
 *   `create_escalation(...)`: Used during critical emergencies to log an escalation ticket into the local database and instantly notify human operators via a Slack webhook.
+*   `record_call_outcome(...)`: Invoked by the agent at the end of the call to log the conversation's final resolution status (e.g., resolved, escalated) into the analytics database.
 
 ---
 
@@ -133,7 +136,9 @@ cd frontend
 pnpm install
 pnpm dev
 ```
-Open your browser and navigate to `http://localhost:3000`. Click the connect button, allow microphone permissions, and start speaking to your disaster response agent!
+Open your browser and navigate to:
+- `http://localhost:3000` — To connect your microphone and speak to the disaster response agent.
+- `http://localhost:3000/dashboard` — To view the live Call Analytics Dashboard.
 
 ### 3. Trigger an Outbound SIP Call (For PSTN Telephony)
 To make the agent proactively call a real-world phone number via Twilio:
