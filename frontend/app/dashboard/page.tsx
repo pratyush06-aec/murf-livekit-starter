@@ -113,6 +113,7 @@ export default function DashboardPage() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          justifyContent: "center",
           padding: "40px 20px",
           position: "relative",
           zIndex: 1,
