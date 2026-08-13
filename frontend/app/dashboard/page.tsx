@@ -1,7 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ShaderBackground from "./ShaderBackground";
+import gsap from "gsap";
+
+function DashboardSkeleton() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Pulse animation for skeleton elements
+      gsap.fromTo(
+        ".skeleton-line",
+        {
+          background: "rgba(239, 68, 68, 0.05)",
+        },
+        {
+          background: "rgba(239, 68, 68, 0.2)",
+          duration: 0.8,
+          yoyo: true,
+          repeat: -1,
+          stagger: 0.1,
+          ease: "sine.inOut"
+        }
+      );
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", maxWidth: "800px", display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "24px" }}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ background: "rgba(255, 255, 255, 0.02)", borderRadius: "16px", padding: "32px 24px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+            <div className="skeleton-line" style={{ width: "60%", height: "14px", borderRadius: "4px", margin: "0 auto 16px auto" }} />
+            <div className="skeleton-line" style={{ width: "40%", height: "48px", borderRadius: "8px", margin: "0 auto" }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ width: "100%", background: "rgba(255, 255, 255, 0.02)", borderRadius: "16px", padding: "24px 32px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+        <div className="skeleton-line" style={{ width: "30%", height: "20px", borderRadius: "4px", marginBottom: "16px" }} />
+        <div className="skeleton-line" style={{ width: "100%", height: "12px", borderRadius: "6px" }} />
+      </div>
+    </div>
+  );
+}
 
 interface CallStats {
   total: number;
@@ -101,9 +144,7 @@ export default function DashboardPage() {
       )}
 
       {/* Loading State */}
-      {loading && !error && (
-        <div style={{ fontSize: "16px", color: "#8892b0" }}>Loading stats...</div>
-      )}
+      {loading && !error && <DashboardSkeleton />}
 
       {/* Stats Cards */}
       {stats && !loading && (
