@@ -68,7 +68,7 @@ export default function DashboardPage() {
           duration: 1.2,
           stagger: 0.15,
           ease: "power3.out",
-          clearProps: "all"
+          clearProps: "transform,opacity"
         });
       }, containerRef);
       return () => ctx.revert();
