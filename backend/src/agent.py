@@ -33,7 +33,9 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 import db
 import weather_api
+import stats_server
 db.init_db()
+stats_server.start_stats_server()
 
 # ── DEBUG: Configure logging ────────────────────────────────────────────────
 logging.basicConfig(
@@ -108,6 +110,13 @@ ESCALATION TO HUMAN OPERATORS:
   2. Ask for their permission to send their details to a human rescue operator.
   3. If they say YES, call the `create_escalation` tool immediately.
   4. After the tool returns a Reference ID, give this Reference ID to the caller and explain what will happen next (e.g., "A human rescue coordinator will review your case shortly.").
+CALL OUTCOME TRACKING:
+- A call is SUCCESSFUL if ANY of the following happen:
+  1. The caller receives verified weather or flood alert information (you used the `get_district_alert` tool and relayed its data).
+  2. You created a human-help escalation request (you used the `create_escalation` tool).
+- As soon as one of these conditions is met, you MUST call the `record_call_outcome` tool with successful=true and a brief reason.
+- Do NOT wait for the call to end to use this tool. Call it as soon as the success criteria is met.
+- If the caller hangs up or the call ends before either condition is met, the system will automatically mark it as failed.
 """
 
 OUTBOUND_PROMPT_ADDENDUM = """
@@ -123,7 +132,8 @@ OUTBOUND CALL RULES:
 
 
 class Assistant(Agent):
-    def __init__(self, phone_number: str | None = None, is_outbound: bool = False) -> None:
+    def __init__(self, phone_number: str | None = None, is_outbound: bool = False, call_id: int | None = None) -> None:
+        self._call_id = call_id
         # Append phone number to prompt context if available
         prompt = SYSTEM_PROMPT
         if is_outbound:
@@ -209,6 +219,19 @@ class Assistant(Agent):
         """
         return await weather_api.fetch_district_alert(district_name)
 
+    @function_tool
+    async def record_call_outcome(self, context: RunContext, successful: bool, reason: str) -> str:
+        """Use this tool to record whether the call was successful.
+
+        Args:
+            successful: True if the call met the success criteria, False otherwise.
+            reason: A brief description of why the call was successful or not.
+        """
+        if self._call_id is not None:
+            db.update_call_log(self._call_id, successful, reason)
+            return "Call outcome recorded."
+        return "No call ID available to record outcome."
+
 
 server = AgentServer()
 # logger.debug("[SERVER] AgentServer created")
@@ -245,7 +268,7 @@ async def my_agent(ctx: JobContext):
     # ── DEBUG: STT init ─────────────────────────────────────────────────
     # logger.debug("[STT] Initializing Deepgram STT (model=nova-3)...")
     try:
-        stt = deepgram.STT(model="nova-3", language="hi")
+        stt = deepgram.STT(model="nova-3", language="multi")
         # logger.debug("[STT] Deepgram STT created successfully")
     except Exception as e:
         # logger.error("[STT] Failed to create Deepgram STT: %s", e)
@@ -355,9 +378,12 @@ async def my_agent(ctx: JobContext):
         # Detect if this is an outbound call (room name starts with "outbound-")
         is_outbound = ctx.room.name.startswith("outbound-")
 
+        # Create a call log entry (defaults to failed until the agent marks it successful)
+        call_id = db.create_call_log()
+
         # Start the session, which initializes the voice pipeline and warms up the models
         await session.start(
-            agent=Assistant(phone_number=phone_number, is_outbound=is_outbound),
+            agent=Assistant(phone_number=phone_number, is_outbound=is_outbound, call_id=call_id),
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 audio_input=room_io.AudioInputOptions(

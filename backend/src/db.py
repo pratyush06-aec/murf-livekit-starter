@@ -32,6 +32,14 @@ def init_db():
                     timestamp DATETIME
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS call_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    successful INTEGER DEFAULT 0,
+                    reason TEXT DEFAULT '',
+                    timestamp DATETIME
+                )
+            ''')
             conn.commit()
     except Exception as e:
         logger.error("Failed to initialize database: %s", e)
@@ -92,3 +100,45 @@ def create_escalation_record(reference_id: str, phone_number: str, who_needs_hel
             conn.commit()
     except Exception as e:
         logger.error("Failed to create escalation record: %s", e)
+
+def create_call_log() -> int | None:
+    """Create a new call log entry (defaults to failed). Returns the call_id."""
+    try:
+        now = datetime.utcnow().isoformat()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO call_logs (successful, reason, timestamp)
+                VALUES (0, '', ?)
+            ''', (now,))
+            conn.commit()
+            return cursor.lastrowid
+    except Exception as e:
+        logger.error("Failed to create call log: %s", e)
+        return None
+
+def update_call_log(call_id: int, successful: bool, reason: str):
+    """Update an existing call log with the outcome."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE call_logs SET successful = ?, reason = ? WHERE id = ?
+            ''', (1 if successful else 0, reason, call_id))
+            conn.commit()
+    except Exception as e:
+        logger.error("Failed to update call log: %s", e)
+
+def get_call_stats() -> dict:
+    """Return aggregate call stats: total, successful, failed."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM call_logs')
+            total = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM call_logs WHERE successful = 1')
+            successful = cursor.fetchone()[0]
+            return {"total": total, "successful": successful, "failed": total - successful}
+    except Exception as e:
+        logger.error("Failed to get call stats: %s", e)
+        return {"total": 0, "successful": 0, "failed": 0}
