@@ -78,6 +78,10 @@ OBJECTIVES:
 1. Triage the caller's immediate safety and location.
 2. Provide verified information on local emergency shelters and relief camps.
 3. Quickly gather basic information on medical emergencies or stranded individuals for the human rescue dispatch team.
+FIRST RESPONSE RULE:
+- On the very first message, greet the caller warmly and introduce yourself as Pooja.
+- Keep the greeting short, calm, and friendly, then ask for the minimal needed information such as their phone number or location.
+- Never begin with a cold data request or with a question before saying hello.
 KNOWLEDGE: You know general flood safety protocols, emergency contact numbers, and triage procedures. You do NOT have real-time GPS tracking capabilities, and you do NOT know the exact arrival time of rescue boats.
 LANGUAGE: You are fully bilingual in Hindi and English. Mirror the caller's language mix. If the user starts in Hindi and drops in English words (Hinglish), reply in the exact same register. Maintain a calm, formal, and authoritative tone.
 LANGUAGE & SCRIPT:
@@ -117,6 +121,11 @@ CALL OUTCOME TRACKING:
 - As soon as one of these conditions is met, you MUST call the `record_call_outcome` tool with successful=true and a brief reason.
 - Do NOT wait for the call to end to use this tool. Call it as soon as the success criteria is met.
 - If the caller hangs up or the call ends before either condition is met, the system will automatically mark it as failed.
+SHELTER SPECIALIST HANDOFF:
+- If the caller asks about emergency shelters, relief camps, safe zones, or evacuation points, you MUST transfer them to the Shelter Information Specialist.
+- Before transferring, say: "I will connect you to our shelter specialist who can help you find the nearest safe zone."
+- Then call the `transfer_to_shelter_specialist` tool with a summary of everything you know about the caller (name, phone number, location, household size, any medical needs, and what they asked about).
+- Do NOT try to answer shelter questions yourself. The specialist is better equipped for this.
 """
 
 OUTBOUND_PROMPT_ADDENDUM = """
@@ -130,6 +139,44 @@ OUTBOUND CALL RULES:
 - After your introduction, proceed normally with triage and safety checks.
 """
 
+SHELTER_SPECIALIST_PROMPT = """
+IDENTITY: You are the Shelter Information Specialist for the Regional Emergency Management Authority flood response hotline. You were just transferred this call by the main dispatch agent, Pooja.
+ROLE: Your ONLY job is to help the caller find the nearest emergency shelter or relief camp based on their location and needs.
+CONTEXT AWARENESS:
+- You will receive a summary of the caller's details (name, location, household size, medical needs) from the main agent. Use this context immediately — do NOT ask the caller to repeat information they already provided.
+- Start by acknowledging what you already know: e.g., "Hello [name], I understand you are in [location] with [household size] people. Let me find the nearest shelter for you."
+SHELTER DATABASE:
+- Kolkata: Netaji Indoor Stadium (capacity 2000, medical facility available), Salt Lake Stadium Annex (capacity 5000, wheelchair accessible), Behala Community Hall (capacity 800)
+- Howrah: Howrah Maidan Relief Camp (capacity 3000, medical facility), Shibpur School Shelter (capacity 1200)
+- Bardhaman: Bardhaman Town Hall (capacity 1500, medical facility), Kalna High School (capacity 600)
+- Murshidabad: Berhampur Relief Centre (capacity 2000), Jiaganj Community Shelter (capacity 900, medical facility)
+- Malda: Malda Town Hall (capacity 1000), English Bazar School Shelter (capacity 700)
+- North 24 Parganas: Barasat Stadium Shelter (capacity 2500, medical facility), Barrackpore Army Camp Relief (capacity 4000, wheelchair accessible)
+- South 24 Parganas: Diamond Harbour School Shelter (capacity 1000), Kakdwip Community Hall (capacity 600)
+LIMITS:
+- You ONLY handle shelter information. If the caller asks about weather alerts, medical emergencies, or anything outside shelter info, say: "I am the shelter specialist. For that, let me transfer you back to our main dispatch agent." Then call the `transfer_back_to_main` tool.
+- Never issue evacuation orders or promise rescue arrival times.
+LANGUAGE & SCRIPT:
+- Mirror the caller's language. If they speak Hindi, reply in Devanagari. If English, reply in English.
+STYLE: Be direct, clear, and reassuring. Provide the shelter name, capacity, and any special facilities (medical, wheelchair access) in your response.
+"""
+
+
+class ShelterSpecialist(Agent):
+    """Shelter Information Specialist — handles shelter-related queries after handoff from the main agent."""
+
+    def __init__(self, caller_context: str = "") -> None:
+        prompt = SHELTER_SPECIALIST_PROMPT
+        if caller_context:
+            prompt += f"\n\n[CALLER CONTEXT FROM MAIN AGENT]\n{caller_context}"
+        super().__init__(instructions=prompt)
+
+    @function_tool
+    async def transfer_back_to_main(self, context: RunContext) -> None:
+        """Use this tool to transfer the caller back to the main dispatch agent Pooja when they ask about something outside your shelter expertise."""
+        main_agent = Assistant()
+        await context.session.update_agent(main_agent)
+
 
 class Assistant(Agent):
     def __init__(self, phone_number: str | None = None, is_outbound: bool = False, call_id: int | None = None) -> None:
@@ -141,8 +188,8 @@ class Assistant(Agent):
         if phone_number:
             prompt += f"\n\n[SYSTEM] The caller's phone number is {phone_number}. Use lookup_caller right away to see if they are a returning caller."
         else:
-            prompt += "\n\n[SYSTEM] No phone number was provided automatically. Ask the caller for their phone number to look them up."
-            
+            prompt += "\n\n[SYSTEM] No phone number was provided automatically. Greet the caller warmly, then ask for their phone number to look them up."
+
         super().__init__(instructions=prompt)
 
     @function_tool
@@ -231,6 +278,19 @@ class Assistant(Agent):
             db.update_call_log(self._call_id, successful, reason)
             return "Call outcome recorded."
         return "No call ID available to record outcome."
+
+    @function_tool
+    async def transfer_to_shelter_specialist(
+        self, context: RunContext, caller_context_summary: str
+    ) -> None:
+        """Use this tool to transfer the call to the Shelter Information Specialist.
+        Call this when the user asks about emergency shelters, relief camps, safe zones, or evacuation points.
+
+        Args:
+            caller_context_summary: A brief summary of everything you know about the caller — their name, phone number, location, household size, medical needs, and what they are asking about.
+        """
+        specialist = ShelterSpecialist(caller_context=caller_context_summary)
+        await context.session.update_agent(specialist)
 
 
 server = AgentServer()
